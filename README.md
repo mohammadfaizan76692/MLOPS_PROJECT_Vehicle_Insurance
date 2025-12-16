@@ -1,1 +1,270 @@
-🚗 Vehicle Data MLOps Project: Quick Start GuideThis project implements an end-to-end Machine Learning Operations (MLOps) pipeline for vehicle data, covering everything from database connection to continuous deployment (CI/CD) on AWS.1. 🐍 Local Setup & EnvironmentStepActionNotesProject SetupExecute template.pyCreates the project boilerplate structure.Local PackagesConfigure setup.py & pyproject.tomlEnables module imports across the project.Virtual Environmentconda create -n vehicle python=3.10 -y $\rightarrow$ conda activate vehicle $\rightarrow$ pip install -r requirements.txtSets up and activates the dedicated Python environment.UtilitiesImplement Logging and Exception HandlingTest these utilities using demo.py.2. 💾 MongoDB Atlas IntegrationThis project uses MongoDB Atlas as the primary data source.Atlas Setup: Sign up, create a project, and deploy an M0 Cluster.Access Configuration: Create a DB user and set Network Access to 0.0.0.0/0.Connection String: Copy the connection string (Python driver).Data Ingestion Demo: Create notebook/mongoDB_demo.ipynb and push the initial dataset to your Atlas cluster.Set Environment Variable: Export your MongoDB connection URL.Bash: export MONGODB_URL="..."Powershell: $env:MONGODB_URL = "..."3. ⚙️ MLOps Pipeline ComponentsThe core ML pipeline is built using modular components:ComponentImplementation FocusPre-requisitesData IngestionConnects to MongoDB, fetches data, and transforms it to a DataFrame.Variables in constants.__init__.py, DB connection in mongo_db_connections.py.Data ValidationChecks data quality against schema defined in config.schema.yaml.Complete utils.main_utils.py and config.schema.yaml.Data TransformationPreprocesses data (e.g., scaling, encoding).Implement classes in entity/estimator.py.Model TrainerTrains and saves the best machine learning model.Update entity/estimator.py.Model Evaluation & PusherCompares current model with the production model in S3 and pushes the best one.Requires AWS setup (Section 4).4. ☁️ AWS S3 Setup (Model Registry)AWS is used for model storage and deployment infrastructure.IAM User (firstproj): Create an IAM user with AdministratorAccess and generate an Access Key ID and Secret Access Key.Environment Variables: Set the AWS credentials locally (e.g., export AWS_ACCESS_KEY_ID="...").S3 Bucket: Create a public-read S3 bucket named my-model-mlopsproj in us-east-1 to act as the Model Registry.Code Integration: Add code to src.configuration.aws_connection.py and src.aws_storage to handle S3 interactions.5. 🌐 Web Application & PredictionPrediction Pipeline: Set up the logic for real-time inference.Web App: Implement app.py using a framework (like Flask/Streamlit) and add static and template folders for the front end.6. 🔁 CI/CD with GitHub Actions & EC2Automate the build, push, and deployment process.Docker Setup: Create Dockerfile and .dockerignore.ECR Repository: Create an ECR repo (vehicleproj) to store Docker images.EC2 Runner: Launch an Ubuntu T2 Medium instance on AWS.Install Docker on the EC2 machine.Configure the EC2 instance as a self-hosted runner for your GitHub project.GitHub Secrets: Set the following repository secrets:AWS_ACCESS_KEY_ID (for CI/CD user, e.g., usvisa-user)AWS_SECRET_ACCESS_KEYAWS_DEFAULT_REGIONECR_REPODeployment: The aws.yaml workflow will trigger on push.Launch: Update the EC2 Security Group to open port 5080. Access the application via: http://<EC2-Public-IP>:5080.Model training can also be triggered at the /training route.
+# 🚗 Vehicle Data End-to-End MLOps Project
+
+> **A complete production-grade Machine Learning system — from raw data ingestion to cloud deployment with CI/CD.**
+
+This project demonstrates how to build a **scalable, modular, and industry-ready MLOps pipeline** using **Python, MongoDB, AWS, Docker, and GitHub Actions**.
+It closely mirrors **real-world ML engineering workflows** followed in production environments.
+
+---
+
+## 🚀 What This Project Demonstrates
+
+* ✅ End-to-end **ML pipeline architecture**
+* ✅ Clean & modular **project template**
+* ✅ **MongoDB Atlas** for real-world data ingestion
+* ✅ **Schema-based data validation**
+* ✅ Feature engineering & transformation pipelines
+* ✅ **Model training, evaluation & versioning**
+* ✅ **AWS S3-based model registry**
+* ✅ **Dockerized ML application**
+* ✅ **CI/CD pipeline using GitHub Actions**
+* ✅ **Self-hosted GitHub Runner on EC2**
+* ✅ **Production inference API with Flask**
+
+---
+
+## 🧱 Project Architecture
+
+```
+Raw Data (MongoDB)
+        ↓
+Data Ingestion
+        ↓
+Data Validation
+        ↓
+Data Transformation
+        ↓
+Model Training
+        ↓
+Model Evaluation
+        ↓
+Model Pusher (AWS S3)
+        ↓
+Prediction Pipeline (Flask API)
+        ↓
+Docker + CI/CD + EC2 Deployment
+```
+
+---
+
+## 📁 Project Structure
+
+```bash
+├── src/
+│   ├── components/            # ML pipeline components
+│   ├── configuration/         # MongoDB & AWS configurations
+│   ├── constants/             # Global constants & configs
+│   ├── data_access/           # MongoDB data access logic
+│   ├── entity/                # Config & artifact entities
+│   ├── logger/                # Centralized logging
+│   ├── exception/             # Custom exception handling
+│   ├── aws_storage/           # S3 model push/pull logic
+│   └── utils/                 # Utility functions
+├── notebook/                  # EDA & MongoDB demo notebooks
+├── templates/                 # HTML templates
+├── static/                    # CSS / static files
+├── app.py                     # Prediction API
+├── demo.py                    # Pipeline testing script
+├── requirements.txt
+├── setup.py
+├── pyproject.toml
+├── Dockerfile
+├── .dockerignore
+└── .github/workflows/aws.yaml
+```
+
+---
+
+## ⚙️ Local Project Setup
+
+### 1️⃣ Create Project Template
+
+```bash
+python template.py
+```
+
+---
+
+### 2️⃣ Configure Local Packages
+
+* Implement local package imports using:
+
+  * `setup.py`
+  * `pyproject.toml`
+* 📘 Reference file: `crashcourse.txt`
+
+---
+
+### 3️⃣ Create Virtual Environment
+
+```bash
+conda create -n vehicle python=3.10 -y
+conda activate vehicle
+pip install -r requirements.txt
+```
+
+---
+
+### 4️⃣ Verify Installation
+
+```bash
+pip list
+```
+
+✔ Confirms local project packages are installed correctly.
+
+---
+
+## 🍃 MongoDB Atlas Setup
+
+1. Create an account on **MongoDB Atlas**
+2. Create a new project → Create Cluster (M0 – Free Tier)
+3. Create a **Database User**
+4. Add Network Access:
+
+   ```
+   0.0.0.0/0
+   ```
+5. Get Python connection string
+6. Replace password and store securely
+
+---
+
+### MongoDB Data Flow
+
+* Dataset placed inside `notebook/`
+* Data pushed using `mongoDB_demo.ipynb`
+* Verified via:
+
+  ```
+  MongoDB Atlas → Database → Browse Collections
+  ```
+
+---
+
+## 🧠 Logging, Exception Handling & EDA
+
+* Centralized logging module
+* Custom exception handling
+* Tested via `demo.py`
+* EDA & Feature Engineering notebooks included
+
+---
+
+## 🔄 Data Ingestion Pipeline
+
+* MongoDB → Python → Pandas DataFrame
+* Config-driven ingestion
+* Artifact tracking enabled
+
+### Environment Variable Setup
+
+**Bash**
+
+```bash
+export MONGODB_URL="mongodb+srv://<username>:<password>@..."
+```
+
+**PowerShell**
+
+```powershell
+$env:MONGODB_URL="mongodb+srv://<username>:<password>@..."
+```
+
+📌 `artifact/` directory is ignored via `.gitignore`
+
+---
+
+## ✅ Data Validation & Transformation
+
+* Schema validation using `schema.yaml`
+* Data drift & missing value checks
+* Feature engineering pipeline
+* Reusable transformers
+
+---
+
+## 🤖 Model Training
+
+* Custom estimator classes
+* Config-driven training
+* Model artifacts stored
+* Threshold-based model comparison
+
+---
+
+## 📊 Model Evaluation & Registry (AWS S3)
+
+* AWS IAM user setup
+* S3 bucket for model registry
+* Automatic comparison with previous models
+* Only better models get pushed
+
+### Required Constants
+
+```python
+MODEL_EVALUATION_CHANGED_THRESHOLD_SCORE = 0.02
+MODEL_BUCKET_NAME = "my-model-mlopsproj"
+MODEL_PUSHER_S3_KEY = "model-registry"
+```
+
+---
+
+## 🌐 Prediction Pipeline
+
+* Flask-based inference API
+* `/predict` → Real-time predictions
+* `/training` → Trigger model training
+
+---
+
+## 🐳 Docker & CI/CD Pipeline
+
+* Dockerized application
+* GitHub Actions workflow
+* Self-hosted GitHub Runner on EC2
+* AWS ECR for Docker image storage
+
+---
+
+## ☁️ Deployment on AWS EC2
+
+* Ubuntu 24.04 EC2 instance
+* Docker installed on server
+* Port **5000** enabled
+
+### Access the Application
+
+```
+http://<EC2_PUBLIC_IP>:5000
+```
+
+---
+
+## 🔐 GitHub Secrets Used
+
+* `AWS_ACCESS_KEY_ID`
+* `AWS_SECRET_ACCESS_KEY`
+* `AWS_DEFAULT_REGION`
+* `ECR_REPO`
+
+---
+
+## 🏁 Final Outcome
+
+✔ Fully automated ML lifecycle
+✔ Production-ready deployment
+✔ Real-world MLOps practices
+✔ Scalable & maintainable codebase
+
+---
+
+## 🙌 Author
+
+**Mohd Faizan**
+Data Scientist | Machine Learning Engineer
+Focused on **Deep Learning, MLOps & Production ML Systems**
+
+---
+
+⭐ **If you like this project, don’t forget to star the repo!**
